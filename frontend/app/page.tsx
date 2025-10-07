@@ -1,90 +1,86 @@
-'use client';
-import { useState } from 'react';
-import { api } from '../lib/api';
-import InputPanel, { Inputs } from '../components/InputPanel';
-import Heatmap from '../components/Heatmap';
-import GreeksCards from '../components/GreeksCards';
-import ModelComparison from '../components/ModelComparison';
-import FileUploadVol from '../components/FileUploadVol';
+import Link from 'next/link'
 
 export default function Page(){
-  const [call,setCall] = useState<any[]>([]);
-  const [put,setPut]   = useState<any[]>([]);
-  const [greeks,setGreeks] = useState<any|null>(null);
-  const [table,setTable] = useState<any[]>([]);
-  const [message,setMessage] = useState<string>('');
-
-  async function onSubmit(i:Inputs){
-    setMessage('');
-    const T = i.tenorUnit==='years' ? i.T_years : (i.T_months/12);
-    const modelPayload = {
-      model: i.model, is_call: true, S:i.S, K:i.K, T, r:i.r, sigma:i.sigma, q:i.q,
-      tenor_unit: i.tenorUnit, tenor_value: i.tenorUnit==='years'? i.T_years : i.T_months,
-      steps:i.steps, is_american:i.is_american, n_paths:i.n_paths, n_steps:i.n_steps, antithetic:i.antithetic
-    };
-    const hmReq = {
-      model: modelPayload,
-      spot_min: i.spot_min, spot_max:i.spot_max, spot_steps:i.spot_steps,
-      vol_min: i.vol_min, vol_max:i.vol_max, vol_steps:i.vol_steps,
-      purchase_call: i.purchase_call || undefined,
-      purchase_put: i.purchase_put || undefined,
-      position_call: i.position_call || 'Long',
-      position_put: i.position_put || 'Long'
-    };
-    const hmRes = await api.post('/heatmap', hmReq).then(r=>r.data);
-    setCall(hmRes.call); setPut(hmRes.put);
-    const gRes = await api.post('/greeks', {S:i.S,K:i.K,T, r:i.r,sigma:i.sigma,q:i.q, tenor_unit:i.tenorUnit, tenor_value: i.tenorUnit==='years'? i.T_years : i.T_months}).then(r=>r.data);
-    setGreeks(gRes);
-    const models = [ 'Black-Scholes (European)','Binomial CRR','Trinomial JR','Monte Carlo (European)','LSMC (American)' ];
-    const rows = [] as any[];
-    for(const m of models){
-      const c = await api.post('/price', {...modelPayload, model:m, is_call:true}).then(r=>r.data.price);
-      const p = await api.post('/price', {...modelPayload, model:m, is_call:false}).then(r=>r.data.price);
-      rows.push({Model:m, Call:c, Put:p});
-    }
-    setTable(rows);
-    setMessage('Calcolo completato.');
-  }
-
-  async function onUploadPrices(prices:number[]){
-    const rv = await api.post('/realized-vol', {prices, periods_per_year:252}).then(r=>r.data.realized_vol);
-    setMessage(`σ realizzata: ${rv.toFixed(4)}.`);
-  }
-
   return (
     <main className="max-w-7xl mx-auto p-6 space-y-6">
-      <header className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold">Options Price — Interactive Heatmap</h1>
-        <div className="text-sm text-brand-500">bianco/grigio/nero · heatmap rosso→bianco</div>
-      </header>
+      <div className="text-center space-y-4">
+        <h1 className="text-4xl font-bold text-gray-900">Option Pricer</h1>
+        <p className="text-xl text-gray-600">Scegli il tipo di analisi che preferisci</p>
+      </div>
+      
+      <div className="grid md:grid-cols-2 gap-6 mt-8">
+        <Link href="/simple" className="card p-8 block hover:shadow-lg transition-shadow group">
+          <div className="space-y-4">
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center group-hover:bg-blue-200 transition-colors">
+              <svg className="w-6 h-6 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-900">Analisi Semplice</h2>
+            <p className="text-gray-600">
+              Modello Black-Scholes con parametri essenziali. Perfetta per un check rapido con heatmap Call/Put e calcolo delle Greeks.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500">
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                Black-Scholes Model
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                Heatmap Call & Put
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                Greeks (Δ, Γ, Θ, ν, ρ)
+              </div>
+            </div>
+          </div>
+        </Link>
 
-      <InputPanel onSubmit={onSubmit} />
+        <Link href="/advanced" className="card p-8 block hover:shadow-lg transition-shadow group">
+          <div className="space-y-4">
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+              <svg className="w-6 h-6 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-semibold text-gray-900">Analisi Avanzata</h2>
+            <p className="text-gray-600">
+              Tutti i modelli di pricing, analisi P&L, upload dati storici per volatilità realizzata e logging completo.
+            </p>
+            <div className="space-y-2 text-sm text-gray-500">
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                5 Modelli (BSM, CRR, JR, MC, LSMC)
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                Analisi P&L e Posizioni
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                Upload CSV & σ realizzata
+              </div>
+              <div className="flex items-center">
+                <span className="w-2 h-2 bg-purple-400 rounded-full mr-2"></span>
+                Confronto Modelli
+              </div>
+            </div>
+          </div>
+        </Link>
+      </div>
 
-      {message && <div className="card p-4">{message}</div>}
-
-      <section className="grid md:grid-cols-2 gap-4">
-        <Heatmap data={call} title="Call Heatmap" />
-        <Heatmap data={put}  title="Put Heatmap" />
-      </section>
-
-      {greeks && (
-        <section className="space-y-3">
-          <h2 className="text-2xl font-semibold">Greeks — Black–Scholes</h2>
-          <GreeksCards g={greeks} />
-        </section>
-      )}
-
-      {table.length>0 && (
-        <section className="space-y-3">
-          <h2 className="text-2xl font-semibold">Models+</h2>
-          <ModelComparison rows={table} />
-        </section>
-      )}
-
-      <section className="space-y-3">
-        <h2 className="text-2xl font-semibold">Upload storici → σ realizzata</h2>
-        <FileUploadVol onLoaded={onUploadPrices} />
-      </section>
+      <div className="mt-12 bg-gray-50 rounded-lg p-6">
+        <h3 className="text-lg font-semibold text-gray-900 mb-3">Come iniziare</h3>
+        <div className="grid md:grid-cols-2 gap-4 text-sm text-gray-600">
+          <div>
+            <strong>Per principianti:</strong> Inizia con l'analisi semplice per familiarizzare con i concetti base del pricing delle opzioni.
+          </div>
+          <div>
+            <strong>Per esperti:</strong> Usa l'analisi avanzata per confronti dettagliati tra modelli e analisi sofisticate.
+          </div>
+        </div>
+      </div>
     </main>
   )
 }
