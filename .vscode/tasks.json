@@ -1,0 +1,92 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Backend: Create venv + install",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "command": "python3 -m venv .venv && source .venv/bin/activate && pip3 install -r requirements.txt"
+    },
+    {
+      "label": "Backend: Run (uvicorn)",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "command": "source .venv/bin/activate && uvicorn app.main:app --reload --port 8000",
+      "isBackground": true,
+      "group": "build",
+      "presentation": { 
+        "panel": "new", 
+        "reveal": "always",
+        "echo": true,
+        "focus": false
+      }
+    },
+    {
+      "label": "Frontend: npm install",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "command": "npm install"
+    },
+    {
+      "label": "Frontend: write .env.local",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "command": "echo \"NEXT_PUBLIC_API_BASE_URL=http://localhost:8000\" > .env.local"
+    },
+    {
+      "label": "Frontend: Run (next dev)",
+      "type": "shell",
+      "options": { "cwd": "${workspaceFolder}/frontend" },
+      "command": "npm run dev",
+      "isBackground": true,
+      "group": "build",
+      "presentation": { 
+        "panel": "new", 
+        "reveal": "always",
+        "echo": true,
+        "focus": false
+      }
+    },
+    {
+      "label": "Open: Backend health",
+      "type": "shell",
+      "command": "open http://localhost:8000/health"
+    },
+    {
+      "label": "Open: Frontend",
+      "type": "shell",
+      "command": "open http://localhost:3000/"
+    },
+    {
+      "label": "Setup all (one-time)",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Backend: Create venv + install",
+        "Frontend: npm install",
+        "Frontend: write .env.local"
+      ]
+    },
+    {
+      "label": "Start Backend",
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Backend: Run (uvicorn)"
+      ]
+    },
+    {
+      "label": "Start Frontend", 
+      "dependsOrder": "sequence",
+      "dependsOn": [
+        "Frontend: Run (next dev)"
+      ]
+    },
+    {
+      "label": "Open Apps",
+      "dependsOrder": "parallel",
+      "dependsOn": [
+        "Open: Backend health",
+        "Open: Frontend"
+      ]
+    }
+  ]
+}
